@@ -25,9 +25,12 @@
   const publicationSearch = document.querySelector("[data-publication-search]");
   const publicationYear = document.querySelector("[data-publication-year]");
   const publicationCount = document.querySelector("[data-publication-count]");
+  const publicationToggle = document.querySelector("[data-publication-toggle]");
 
   if (publicationList && Array.isArray(window.PUBLICATIONS)) {
     const publications = window.PUBLICATIONS;
+    const pageSize = 12;
+    let publicationsExpanded = false;
     const years = [...new Set(publications.map((entry) => entry.year).filter(Boolean))].sort((a, b) => b - a);
 
     if (publicationYear) {
@@ -48,8 +51,10 @@
         return matchesQuery && matchesYear;
       });
 
+      const visiblePublications = publicationsExpanded ? matches : matches.slice(0, pageSize);
+
       publicationList.replaceChildren();
-      for (const entry of matches) {
+      for (const entry of visiblePublications) {
         const item = document.createElement("li");
         const year = document.createElement("span");
         const citation = document.createElement("span");
@@ -62,13 +67,30 @@
 
       if (publicationCount) {
         publicationCount.textContent = publicationCount.dataset.template
-          ?.replace("{shown}", matches.length)
-          .replace("{total}", publications.length) || `${matches.length} of ${publications.length}`;
+          ?.replace("{shown}", visiblePublications.length)
+          .replace("{total}", matches.length) || `${visiblePublications.length} of ${matches.length}`;
+      }
+
+      if (publicationToggle) {
+        publicationToggle.hidden = matches.length <= pageSize;
+        publicationToggle.textContent = publicationsExpanded
+          ? publicationToggle.dataset.collapseLabel
+          : publicationToggle.dataset.expandLabel;
       }
     };
 
-    publicationSearch?.addEventListener("input", renderPublications);
-    publicationYear?.addEventListener("change", renderPublications);
+    const resetAndRender = () => {
+      publicationsExpanded = false;
+      renderPublications();
+    };
+
+    publicationSearch?.addEventListener("input", resetAndRender);
+    publicationYear?.addEventListener("change", resetAndRender);
+    publicationToggle?.addEventListener("click", () => {
+      publicationsExpanded = !publicationsExpanded;
+      renderPublications();
+      if (!publicationsExpanded) publicationList.scrollIntoView({ block: "start" });
+    });
     renderPublications();
   }
 
